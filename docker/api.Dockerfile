@@ -1,7 +1,7 @@
 # Build context: the repository root.
 # Base images are pinned by digest so a build cannot silently pick up a different (or tampered) image behind the same
 # tag. Dependabot proposes digest updates. The tag is kept for readability.
-FROM mcr.microsoft.com/dotnet/sdk:10.0@sha256:8c6edfb26c85153f236d26efebd9ad349aec403583f343f201ee67838b23658d AS build
+FROM mcr.microsoft.com/dotnet/sdk:11.0@sha256:2794448a07118a6eaf00f29ab5d2bf44928517ce5ff86505a63a69230374f599 AS build
 WORKDIR /src
 
 # Restore first so this layer is cached until a project file changes.
