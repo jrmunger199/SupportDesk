@@ -1,0 +1,317 @@
+:host {
+  display: grid;
+  gap: 1rem;
+}
+
+.head h1,
+.head p {
+  margin: 0;
+}
+
+.filters {
+  display: flex;
+  gap: 1rem;
+  align-items: end;
+  flex-wrap: wrap;
+  padding: 0.9rem 1.1rem;
+}
+
+.filters .grow {
+  flex: 1;
+  min-width: 14rem;
+}
+
+.scope {
+  display: inline-flex;
+  padding: 0.2rem;
+  gap: 0.15rem;
+  background: var(--surface-2);
+  border-radius: 10px;
+}
+
+.scope button {
+  border: 0;
+  background: none;
+  padding: 0.4rem 0.8rem;
+  border-radius: 8px;
+  font: inherit;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.scope button[aria-pressed='true'] {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 14%);
+}
+
+.state {
+  display: grid;
+  gap: 0.75rem;
+  justify-items: start;
+}
+
+/* ---- Columns ---- */
+
+.board {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(16.5rem, 1fr);
+  gap: 0.9rem;
+  align-items: start;
+  overflow-x: auto;
+  padding-bottom: 0.75rem;
+}
+
+.column {
+  --accent-col: var(--muted);
+  display: grid;
+  gap: 0.6rem;
+  padding: 0.7rem;
+  border-radius: 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--accent-col);
+  min-height: 12rem;
+  transition:
+    opacity 0.15s,
+    background 0.15s,
+    box-shadow 0.15s;
+}
+
+.column[data-status='Open'] {
+  --accent-col: var(--info);
+}
+
+.column[data-status='InProgress'] {
+  --accent-col: var(--warning);
+}
+
+.column[data-status='Resolved'] {
+  --accent-col: var(--success);
+}
+
+.column[data-status='Closed'] {
+  --accent-col: var(--muted);
+}
+
+.column header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 0.2rem;
+}
+
+.column h2 {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+}
+
+.swatch {
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  background: var(--accent-col);
+}
+
+.count {
+  min-width: 1.6rem;
+  padding: 0.05rem 0.5rem;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+/* While a card is held, columns that can take it glow and the rest step back. */
+.column.target {
+  background: var(--accent-soft);
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
+.column.blocked {
+  opacity: 0.45;
+}
+
+.cards {
+  display: grid;
+  gap: 0.55rem;
+  min-height: 4rem;
+  align-content: start;
+}
+
+.empty,
+.more {
+  margin: 0;
+  padding: 0.6rem 0.2rem;
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.more {
+  padding-top: 0;
+}
+
+/* ---- Cards ---- */
+
+.ticket {
+  position: relative;
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.7rem 0.8rem 0.7rem 0.95rem;
+  border-radius: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+}
+
+.ticket::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  border-radius: 10px 0 0 10px;
+  background: var(--border);
+}
+
+.ticket[data-priority='Urgent']::before {
+  background: var(--danger);
+}
+
+.ticket[data-priority='High']::before {
+  background: var(--warning);
+}
+
+.ticket[data-priority='Normal']::before {
+  background: var(--info);
+}
+
+.ticket {
+  cursor: pointer;
+}
+
+.ticket.draggable {
+  cursor: grab;
+}
+
+.ticket.draggable:active {
+  cursor: grabbing;
+}
+
+.ticket.saving {
+  opacity: 0.6;
+}
+
+.top,
+.bottom {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.top {
+  justify-content: space-between;
+}
+
+.number {
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.title {
+  color: var(--text);
+  font-weight: 600;
+  line-height: 1.3;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.title:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+.requester {
+  margin: 0;
+  font-size: 0.82rem;
+}
+
+.bottom {
+  margin-top: 0.1rem;
+  font-size: 0.8rem;
+}
+
+.when {
+  margin-left: auto;
+}
+
+.unassigned {
+  display: inline-grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  border: 1.5px dashed var(--muted);
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.move select {
+  width: 100%;
+  padding: 0.25rem 0.4rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.skeleton.tall {
+  height: 9rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .column {
+    transition: none;
+  }
+}
+
+.ticket.selected {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/*
+ * A stretched link: the title's ::after covers the whole card, so a click anywhere opens the ticket while keyboard
+ * users still get a single, ordinary link to tab to. The "move to" list sits above it so it stays usable.
+ */
+.title::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 10px;
+}
+
+.title:focus-visible {
+  outline: none;
+}
+
+.ticket:has(.title:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.ticket:hover .title {
+  color: var(--accent);
+}
+
+.move {
+  position: relative;
+  z-index: 1;
+}

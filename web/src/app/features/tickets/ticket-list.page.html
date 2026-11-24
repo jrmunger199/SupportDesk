@@ -1,0 +1,194 @@
+<div class="row between head">
+  <div>
+    <h1>Tickets</h1>
+    <p class="muted">
+      @if (auth.isStaff()) {
+        Everything raised in {{ auth.organization() }}.
+      } @else {
+        Tickets you have raised.
+      }
+    </p>
+  </div>
+  <a class="btn btn-primary" routerLink="/tickets/new">New ticket</a>
+</div>
+
+<section class="stats" aria-label="Ticket summary">
+  @for (status of statuses; track status) {
+    <button
+      type="button"
+      class="stat"
+      [class.active]="filters().status === status"
+      [attr.aria-pressed]="filters().status === status"
+      (click)="filterByStatus(status)"
+    >
+      <span class="stat-value">{{ stats.hasValue() ? stats.value().byStatus[status] : '–' }}</span>
+      <span class="stat-label">{{ statusLabel[status] }}</span>
+    </button>
+  }
+  @if (auth.isStaff()) {
+    <button
+      type="button"
+      class="stat"
+      [class.active]="filters().assignment === 'unassigned'"
+      [attr.aria-pressed]="filters().assignment === 'unassigned'"
+      (click)="
+        patch({
+          assignment: filters().assignment === 'unassigned' ? 'all' : 'unassigned',
+          status: '',
+        })
+      "
+    >
+      <span class="stat-value">{{ stats.hasValue() ? stats.value().unassigned : '–' }}</span>
+      <span class="stat-label">Unassigned</span>
+    </button>
+    <button
+      type="button"
+      class="stat"
+      [class.active]="filters().assignment === 'me'"
+      [attr.aria-pressed]="filters().assignment === 'me'"
+      (click)="patch({ assignment: filters().assignment === 'me' ? 'all' : 'me', status: '' })"
+    >
+      <span class="stat-value">{{ stats.hasValue() ? stats.value().assignedToMe : '–' }}</span>
+      <span class="stat-label">Assigned to me</span>
+    </button>
+  }
+</section>
+
+<section class="card filters" aria-label="Filters">
+  <div class="field grow">
+    <label for="f-search">Search</label>
+    <input
+      id="f-search"
+      type="search"
+      placeholder="Title, description, or #number"
+      [ngModel]="searchText()"
+      (ngModelChange)="onSearch($event)"
+    />
+  </div>
+  <div class="field">
+    <label for="f-priority">Priority</label>
+    <select id="f-priority" [ngModel]="filters().priority" (ngModelChange)="setPriority($event)">
+      <option value="">Any</option>
+      @for (p of priorities; track p) {
+        <option [value]="p">{{ p }}</option>
+      }
+    </select>
+  </div>
+  <div class="field">
+    <label for="f-sort">Sort by</label>
+    <select id="f-sort" [ngModel]="filters().sort" (ngModelChange)="setSort($event)">
+      <option value="updated">Last updated</option>
+      <option value="created">Newest</option>
+      <option value="priority">Priority</option>
+      <option value="number">Number</option>
+    </select>
+  </div>
+  <button
+    type="button"
+    class="btn"
+    (click)="patch({ descending: !filters().descending })"
+    [attr.aria-label]="
+      filters().descending
+        ? 'Sorted descending. Switch to ascending'
+        : 'Sorted ascending. Switch to descending'
+    "
+  >
+    {{ filters().descending ? '↓ Desc' : '↑ Asc' }}
+  </button>
+  @if (filtersActive()) {
+    <button type="button" class="btn-link" (click)="reset()">Clear filters</button>
+  }
+</section>
+
+<section class="card list" aria-live="polite" [attr.aria-busy]="tickets.isLoading()">
+  @if (tickets.error() && !view()) {
+    <div class="state">
+      <p class="banner error" role="alert">Could not load tickets.</p>
+      <button type="button" class="btn" (click)="tickets.reload()">Try again</button>
+    </div>
+  } @else if (!view()) {
+    <div class="state" aria-label="Loading tickets">
+      @for (row of [1, 2, 3, 4]; track row) {
+        <div class="skeleton row-skeleton"></div>
+      }
+    </div>
+  } @else if (view()!.items.length === 0) {
+    <div class="state empty">
+      <h2>No tickets here</h2>
+      <p class="muted">
+        {{ filtersActive() ? 'Nothing matches those filters.' : 'Nothing has been raised yet.' }}
+      </p>
+      @if (filtersActive()) {
+        <button type="button" class="btn" (click)="reset()">Clear filters</button>
+      } @else {
+        <a class="btn btn-primary" routerLink="/tickets/new">Raise the first ticket</a>
+      }
+    </div>
+  } @else {
+    <div class="table-wrap">
+      <table class="table">
+        <caption class="sr-only">
+          Tickets,
+          {{
+            view()!.total
+          }}
+          in total
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col">#</th>
+            <th scope="col">Title</th>
+            <th scope="col">Status</th>
+            <th scope="col">Priority</th>
+            <th scope="col" class="hide-sm">Requester</th>
+            <th scope="col" class="hide-sm">Assignee</th>
+            <th scope="col">Updated</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (t of view()!.items; track t.id) {
+            <tr [class.flash]="flashing().has(t.id)">
+              <td class="num">{{ t.number }}</td>
+              <td>
+                <a class="title" [routerLink]="['/tickets', t.id]">{{ t.title }}</a>
+                @if (t.commentCount > 0) {
+                  <span class="muted comments" [attr.aria-label]="t.commentCount + ' comments'"
+                    >💬 {{ t.commentCount }}</span
+                  >
+                }
+              </td>
+              <td><app-status-badge [status]="t.status" /></td>
+              <td><app-priority-badge [priority]="t.priority" /></td>
+              <td class="hide-sm">{{ t.requester.displayName }}</td>
+              <td class="hide-sm">{{ t.assignee?.displayName ?? '—' }}</td>
+              <td class="muted" [title]="t.updatedUtc">{{ t.updatedUtc | timeAgo }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <nav class="pager" aria-label="Pagination">
+      <span class="muted">{{ view()!.total }} ticket{{ view()!.total === 1 ? '' : 's' }}</span>
+      <div class="row">
+        <button
+          type="button"
+          class="btn btn-sm"
+          [disabled]="view()!.page <= 1"
+          (click)="patch({ page: view()!.page - 1 })"
+        >
+          Previous
+        </button>
+        <span>Page {{ view()!.page }} of {{ totalPages() }}</span>
+        <button
+          type="button"
+          class="btn btn-sm"
+          [disabled]="view()!.page >= totalPages()"
+          (click)="patch({ page: view()!.page + 1 })"
+        >
+          Next
+        </button>
+      </div>
+    </nav>
+  }
+</section>

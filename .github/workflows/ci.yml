@@ -1,0 +1,107 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    # Integration tests run the real API against a real SQL Server, so migrations and queries are exercised.
+    services:
+      mssql:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: "Y"
+          MSSQL_SA_PASSWORD: CiOnly-Passw0rd!
+        ports:
+          - 1433:1433
+        options: >-
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P CiOnly-Passw0rd! -Q 'SELECT 1'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+          --health-start-period 20s
+    env:
+      SUPPORTDESK_TEST_SQL: Server=localhost,1433;User Id=sa;Password=CiOnly-Passw0rd!;TrustServerCertificate=True
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          dotnet-version: 10.0.x
+      - run: dotnet restore
+      - name: Formatting (whitespace and line endings)
+        run: dotnet format whitespace SupportDesk.slnx --verify-no-changes
+      - run: dotnet build --configuration Release --no-restore
+      - run: dotnet test --configuration Release --no-build
+      - name: Migrations are in sync with the model
+        run: |
+          dotnet tool restore
+          dotnet dotnet-ef migrations has-pending-model-changes -p src/SupportDesk.Data -s src/SupportDesk.Api
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm test -- --watch=false
+      - run: npm run build
+      - name: Production bundle contains no demo credentials or source maps
+        run: npm run check:bundle
+
+  # Fails the build when a dependency has a published security advisory.
+  dependency-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          dotnet-version: 10.0.x
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - name: Every action is pinned to a full commit SHA
+        run: |
+          if grep -rnE "uses: [^@]+@v[0-9]" .github/workflows; then
+            echo "::error::Pin actions to a full commit SHA, not a movable tag"
+            exit 1
+          fi
+      - name: NuGet packages (including transitive)
+        run: |
+          dotnet restore
+          dotnet list package --vulnerable --include-transitive 2>&1 | tee audit.txt
+          if grep -q "has the following vulnerable packages" audit.txt; then
+            echo "::error::Vulnerable NuGet packages found"
+            exit 1
+          fi
+      - name: npm packages
+        working-directory: web
+        run: |
+          npm ci
+          npm audit --audit-level=moderate
+
+  docker:
+    runs-on: ubuntu-latest
+    needs: [backend, frontend]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Compose file is valid
+        run: MSSQL_SA_PASSWORD=ci-placeholder JWT_KEY=ci-placeholder docker compose config --quiet
+      - name: Build API image
+        run: docker build -f docker/api.Dockerfile -t supportdesk-api .
+      - name: Build web image
+        run: docker build -f docker/web.Dockerfile -t supportdesk-web .

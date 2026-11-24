@@ -1,0 +1,5 @@
+# Keep line endings identical on every OS so formatters and diffs agree.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.ico binary

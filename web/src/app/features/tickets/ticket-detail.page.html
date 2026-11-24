@@ -1,0 +1,176 @@
+@if (!embedded()) {
+  <p><a routerLink="/tickets">← All tickets</a></p>
+}
+
+@if (ticket.error() && !ticket.hasValue()) {
+  <div class="card state">
+    <h1>Ticket not found</h1>
+    <p class="muted">It may have been removed, or you may not have access to it.</p>
+    <a class="btn" routerLink="/tickets">Back to tickets</a>
+  </div>
+} @else if (ticket.hasValue()) {
+  @let t = ticket.value();
+
+  @if (conflict()) {
+    <div class="banner warning conflict" role="alert">
+      <span
+        >Someone else changed this ticket while you were editing. Your change was not applied.</span
+      >
+      <button type="button" class="btn btn-sm" (click)="reloadAfterConflict()">Load latest</button>
+    </div>
+  }
+
+  <div class="layout">
+    <section class="stack main-col">
+      <article class="card">
+        <div class="row">
+          <span class="muted number">#{{ t.number }}</span>
+          <app-status-badge [status]="t.status" />
+          <app-priority-badge [priority]="t.priority" />
+        </div>
+        <h1>{{ t.title }}</h1>
+        <p class="muted byline">
+          Raised by {{ t.requester.displayName }}
+          <span [title]="t.createdUtc">{{ t.createdUtc | timeAgo }}</span>
+        </p>
+        <p class="description"><app-rich-text [text]="t.description" /></p>
+      </article>
+
+      <section class="card" aria-labelledby="activity-title">
+        <h2 id="activity-title">Activity</h2>
+        <ol class="timeline">
+          @for (entry of timeline(); track entry.id) {
+            @if (entry.kind === 'comment') {
+              <li class="comment">
+                <div class="meta">
+                  <strong>{{ entry.who }}</strong>
+                  <span class="muted" [title]="entry.at">{{ entry.at | timeAgo }}</span>
+                </div>
+                <p><app-rich-text [text]="entry.body" /></p>
+              </li>
+            } @else {
+              <li class="event muted">
+                <span class="dot" aria-hidden="true"></span>
+                <span
+                  ><strong>{{ entry.who }}</strong> · {{ entry.detail }}</span
+                >
+                <span [title]="entry.at">{{ entry.at | timeAgo }}</span>
+              </li>
+            }
+          }
+        </ol>
+
+        @if (canComment()) {
+          <!-- A standalone FormControl has no ngSubmit, so handle submit directly and stop the browser's own submission. -->
+          <form class="stack comment-form" (submit)="$event.preventDefault(); postComment()">
+            <div class="field">
+              <label for="comment">Add a comment</label>
+              <app-mention-textarea
+                inputId="comment"
+                [formControl]="commentControl"
+                [ticketId]="t.id"
+                placeholder="Write an update or ask a question…"
+              />
+            </div>
+            <div class="row">
+              <button
+                type="submit"
+                class="btn btn-primary"
+                [disabled]="posting() || commentControl.invalid"
+              >
+                {{ posting() ? 'Posting…' : 'Post comment' }}
+              </button>
+            </div>
+          </form>
+        } @else {
+          <p class="banner">
+            This ticket is closed.
+            @if (auth.isStaff()) {
+              Reopen it to continue the conversation.
+            }
+          </p>
+        }
+      </section>
+    </section>
+
+    <aside class="stack side-col" aria-label="Ticket details">
+      <section class="card">
+        <h2>Details</h2>
+
+        <dl class="details">
+          <dt>Status</dt>
+          <dd><app-status-badge [status]="t.status" /></dd>
+
+          <dt>Requester</dt>
+          <dd>{{ t.requester.displayName }}</dd>
+
+          @if (auth.isStaff()) {
+            <dt><label for="priority">Priority</label></dt>
+            <dd>
+              <select
+                id="priority"
+                [value]="t.priority"
+                [disabled]="saving()"
+                (change)="onPriority($any($event.target).value)"
+              >
+                @for (p of priorities; track p) {
+                  <option [value]="p" [selected]="p === t.priority">{{ p }}</option>
+                }
+              </select>
+            </dd>
+
+            <dt><label for="assignee">Assignee</label></dt>
+            <dd>
+              <select
+                id="assignee"
+                [disabled]="saving()"
+                (change)="onAssignee($any($event.target).value)"
+              >
+                <option value="" [selected]="!t.assignee">Unassigned</option>
+                @for (person of assignees(); track person.id) {
+                  <option [value]="person.id" [selected]="person.id === t.assignee?.id">
+                    {{ person.displayName }}
+                  </option>
+                }
+              </select>
+            </dd>
+          } @else {
+            <dt>Priority</dt>
+            <dd><app-priority-badge [priority]="t.priority" /></dd>
+
+            <dt>Assignee</dt>
+            <dd>{{ t.assignee?.displayName ?? 'Not assigned yet' }}</dd>
+          }
+
+          <dt>Updated</dt>
+          <dd [title]="t.updatedUtc">{{ t.updatedUtc | timeAgo }}</dd>
+        </dl>
+      </section>
+
+      @if (auth.isStaff() && t.allowedTransitions.length) {
+        <section class="card" aria-labelledby="actions-title">
+          <h2 id="actions-title">Actions</h2>
+          <div class="actions">
+            @for (next of t.allowedTransitions; track next) {
+              <button
+                type="button"
+                class="btn"
+                [class.btn-primary]="next === 'Resolved' || next === 'InProgress'"
+                [disabled]="saving()"
+                (click)="apply({ status: next })"
+              >
+                {{ actionLabel[next] }}
+              </button>
+            }
+          </div>
+        </section>
+      }
+    </aside>
+  </div>
+} @else {
+  <div class="card stack" aria-label="Loading ticket">
+    <div class="skeleton" style="width: 40%; height: 1.6rem"></div>
+    <div class="skeleton"></div>
+    <div class="skeleton" style="width: 80%"></div>
+  </div>
+}

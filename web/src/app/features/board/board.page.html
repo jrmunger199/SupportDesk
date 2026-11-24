@@ -1,0 +1,174 @@
+<div class="row between head">
+  <div>
+    <h1>Board</h1>
+    <p class="muted">
+      @if (canMove()) {
+        Drag a card to another column to change its status. Columns that can't accept the card light
+        down.
+      } @else {
+        Your tickets by status.
+      }
+    </p>
+  </div>
+  <a class="btn btn-primary" routerLink="/tickets/new">New ticket</a>
+</div>
+
+<section class="card filters" aria-label="Board filters">
+  <div class="field grow">
+    <label for="b-search">Search</label>
+    <input
+      id="b-search"
+      type="search"
+      placeholder="Title, description, or #number"
+      [ngModel]="search()"
+      (ngModelChange)="search.set($event)"
+    />
+  </div>
+
+  @if (auth.isStaff()) {
+    <div class="scope" role="group" aria-label="Show">
+      <button type="button" [attr.aria-pressed]="scope() === 'all'" (click)="setScope('all')">
+        Everyone
+      </button>
+      <button type="button" [attr.aria-pressed]="scope() === 'mine'" (click)="setScope('mine')">
+        Assigned to me
+      </button>
+      <button
+        type="button"
+        [attr.aria-pressed]="scope() === 'unassigned'"
+        (click)="setScope('unassigned')"
+      >
+        Unassigned
+      </button>
+    </div>
+  }
+</section>
+
+@if (board.error() && columns().length === 0) {
+  <div class="card state">
+    <p class="banner error" role="alert">Could not load the board.</p>
+    <button type="button" class="btn" (click)="board.reload()">Try again</button>
+  </div>
+} @else if (columns().length === 0) {
+  <div class="board" aria-label="Loading board" aria-busy="true">
+    @for (placeholder of [1, 2, 3, 4]; track placeholder) {
+      <div class="column"><div class="skeleton tall"></div></div>
+    }
+  </div>
+} @else {
+  <div class="board" cdkDropListGroup [class.dragging]="dragging() !== null">
+    @for (column of columns(); track column.status) {
+      <section
+        class="column"
+        [attr.data-status]="column.status"
+        [class.target]="isTarget(column.status)"
+        [class.blocked]="
+          dragging() !== null && !isTarget(column.status) && dragging()!.status !== column.status
+        "
+        [attr.aria-labelledby]="'col-' + column.status"
+      >
+        <header>
+          <h2 id="col-{{ column.status }}">
+            <span class="swatch" aria-hidden="true"></span>{{ statusLabel[column.status] }}
+          </h2>
+          <span class="count" [attr.aria-label]="column.total + ' tickets'">{{
+            column.total
+          }}</span>
+        </header>
+
+        <div
+          class="cards"
+          cdkDropList
+          [cdkDropListData]="column.status"
+          [cdkDropListSortingDisabled]="true"
+          [cdkDropListEnterPredicate]="canEnter"
+          (cdkDropListDropped)="dropped($event)"
+        >
+          @for (card of column.cards; track card.id) {
+            <article
+              class="ticket"
+              [attr.data-id]="card.id"
+              cdkDrag
+              cdkDragPreviewContainer="parent"
+              [cdkDragData]="card"
+              [cdkDragDisabled]="isDisabled(card)"
+              [class.saving]="saving().has(card.id)"
+              [class.draggable]="!isDisabled(card)"
+              [class.selected]="ticket() === card.id"
+              [attr.data-priority]="card.priority"
+              (cdkDragStarted)="dragStarted(card)"
+              (cdkDragEnded)="dragEnded()"
+            >
+              <div class="top">
+                <span class="number">#{{ card.number }}</span>
+                <app-priority-badge [priority]="card.priority" />
+              </div>
+
+              <a
+                class="title"
+                [href]="'/tickets/' + card.id"
+                (click)="titleClicked(card, $event)"
+                >{{ card.title }}</a
+              >
+              <p class="requester muted">{{ card.requester.displayName }}</p>
+
+              <div class="bottom">
+                @if (card.assignee) {
+                  <span class="assignee" [title]="'Assigned to ' + card.assignee.displayName">
+                    <app-avatar [name]="card.assignee.displayName" size="sm" />
+                    <span class="sr-only">Assigned to {{ card.assignee.displayName }}</span>
+                  </span>
+                } @else {
+                  <span class="unassigned" title="Unassigned">
+                    <span aria-hidden="true">?</span><span class="sr-only">Unassigned</span>
+                  </span>
+                }
+
+                @if (card.commentCount > 0) {
+                  <span class="comments muted" [attr.aria-label]="card.commentCount + ' comments'"
+                    >💬 {{ card.commentCount }}</span
+                  >
+                }
+                <span class="when muted" [title]="card.updatedUtc">{{
+                  card.updatedUtc | timeAgo
+                }}</span>
+              </div>
+
+              @if (canMove() && card.allowedTransitions.length) {
+                <label class="move">
+                  <span class="sr-only">Move ticket #{{ card.number }} to</span>
+                  <select [disabled]="saving().has(card.id)" (change)="selected(card, $event)">
+                    <option value="">Move to…</option>
+                    @for (next of card.allowedTransitions; track next) {
+                      <option [value]="next">{{ statusLabel[next] }}</option>
+                    }
+                  </select>
+                </label>
+              }
+            </article>
+          } @empty {
+            <p class="empty muted">
+              {{ isTarget(column.status) ? 'Drop here' : 'No tickets' }}
+            </p>
+          }
+        </div>
+
+        @if (column.total > column.cards.length) {
+          <p class="more muted">
+            Showing {{ column.cards.length }} of {{ column.total }}.
+            <a routerLink="/tickets">See the full list</a>
+          </p>
+        }
+      </section>
+    }
+  </div>
+}
+
+@if (ticket(); as selectedId) {
+  <app-side-panel heading="Ticket details" [fullPage]="['/tickets', selectedId]" (closed)="close()">
+    <!-- One instance per ticket, so switching cards never carries a half-written comment across. -->
+    @for (id of [selectedId]; track id) {
+      <app-ticket-detail-page [id]="id" [embedded]="true" (updated)="board.reload()" />
+    }
+  </app-side-panel>
+}

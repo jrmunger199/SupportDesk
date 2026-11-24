@@ -1,0 +1,44 @@
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="topbar">
+  <div class="container bar">
+    <a class="brand" routerLink="/tickets" aria-label="SupportDesk home">
+      <span class="logo" aria-hidden="true">S</span>
+      <span class="brand-text">SupportDesk</span>
+    </a>
+
+    <nav class="nav" aria-label="Main">
+      <a routerLink="/tickets" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }"
+        >Tickets</a
+      >
+      <a routerLink="/board" routerLinkActive="active">Board</a>
+      <a routerLink="/tickets/new" routerLinkActive="active">New ticket</a>
+      @if (auth.isAdmin()) {
+        <a routerLink="/admin/users" routerLinkActive="active">People</a>
+      }
+    </nav>
+
+    <div class="who">
+      <span
+        class="live"
+        [attr.data-status]="realtime.status()"
+        role="status"
+        [attr.aria-label]="'Live updates: ' + realtime.status()"
+        [title]="'Live updates: ' + realtime.status()"
+      ></span>
+      <div class="identity">
+        <strong>{{ auth.user()?.displayName }}</strong>
+        <span class="muted org">{{ auth.organization() }}</span>
+      </div>
+      <app-notification-bell />
+      @if (auth.user(); as user) {
+        <app-role-badge [role]="user.role" />
+      }
+      <button type="button" class="btn btn-sm" (click)="auth.logout()">Sign out</button>
+    </div>
+  </div>
+</header>
+
+<main id="main" class="container page">
+  <router-outlet />
+</main>

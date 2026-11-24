@@ -1,0 +1,152 @@
+<main class="wrap">
+  <section class="intro" aria-labelledby="intro-title">
+    <span class="logo" aria-hidden="true">S</span>
+    <h1 id="intro-title">SupportDesk</h1>
+    <p class="lead">
+      A multi-tenant helpdesk with live ticket updates. Every organisation gets its own private
+      workspace.
+    </p>
+    <ul class="points">
+      <li>Tickets, comments, and a full audit trail</li>
+      <li>Agents see changes the moment they happen</li>
+      <li>Strict isolation between organisations</li>
+    </ul>
+  </section>
+
+  <section class="card panel" aria-label="Authentication">
+    <div class="tabs" role="tablist" aria-label="Sign in or create an organisation">
+      <button
+        type="button"
+        role="tab"
+        id="tab-signin"
+        [attr.aria-selected]="mode() === 'signin'"
+        aria-controls="panel-signin"
+        (click)="setMode('signin')"
+      >
+        Sign in
+      </button>
+      <button
+        type="button"
+        role="tab"
+        id="tab-register"
+        [attr.aria-selected]="mode() === 'register'"
+        aria-controls="panel-register"
+        (click)="setMode('register')"
+      >
+        Create organisation
+      </button>
+    </div>
+
+    @if (error()) {
+      <p class="banner error" role="alert">{{ error() }}</p>
+    }
+
+    @if (mode() === 'signin') {
+      <form
+        id="panel-signin"
+        role="tabpanel"
+        aria-labelledby="tab-signin"
+        class="stack"
+        [formGroup]="signInForm"
+        (ngSubmit)="signIn()"
+      >
+        <div class="field">
+          <label for="si-email">Email</label>
+          <input id="si-email" type="email" formControlName="email" autocomplete="username" />
+          @if (signInForm.controls.email.touched && signInForm.controls.email.invalid) {
+            <span class="error-text">Enter a valid email address.</span>
+          }
+        </div>
+        <div class="field">
+          <label for="si-password">Password</label>
+          <input
+            id="si-password"
+            type="password"
+            formControlName="password"
+            autocomplete="current-password"
+          />
+          @if (signInForm.controls.password.touched && signInForm.controls.password.invalid) {
+            <span class="error-text">Enter your password.</span>
+          }
+        </div>
+        <button type="submit" class="btn btn-primary" [disabled]="busy()">
+          {{ busy() ? 'Signing in…' : 'Sign in' }}
+        </button>
+      </form>
+
+      @if (demoAccounts.length) {
+        <div class="demo">
+          <p class="muted">Development demo accounts (one click):</p>
+          <div class="row">
+            @for (account of demoAccounts; track account.email) {
+              <button
+                type="button"
+                class="btn btn-sm"
+                [disabled]="busy()"
+                (click)="useDemo(account)"
+              >
+                {{ account.label }}
+              </button>
+            }
+          </div>
+        </div>
+      }
+    } @else {
+      <form
+        id="panel-register"
+        role="tabpanel"
+        aria-labelledby="tab-register"
+        class="stack"
+        [formGroup]="registerForm"
+        (ngSubmit)="register()"
+      >
+        <div class="field">
+          <label for="rg-org">Organisation name</label>
+          <input
+            id="rg-org"
+            type="text"
+            formControlName="organizationName"
+            autocomplete="organization"
+          />
+          @if (
+            registerForm.controls.organizationName.touched &&
+            registerForm.controls.organizationName.invalid
+          ) {
+            <span class="error-text">Enter a name between 2 and 120 characters.</span>
+          }
+        </div>
+        <div class="field">
+          <label for="rg-name">Your name</label>
+          <input id="rg-name" type="text" formControlName="adminName" autocomplete="name" />
+          @if (registerForm.controls.adminName.touched && registerForm.controls.adminName.invalid) {
+            <span class="error-text">Enter your name.</span>
+          }
+        </div>
+        <div class="field">
+          <label for="rg-email">Work email</label>
+          <input id="rg-email" type="email" formControlName="email" autocomplete="email" />
+          @if (registerForm.controls.email.touched && registerForm.controls.email.invalid) {
+            <span class="error-text">Enter a valid email address.</span>
+          }
+        </div>
+        <div class="field">
+          <label for="rg-password">Password</label>
+          <input
+            id="rg-password"
+            type="password"
+            formControlName="password"
+            autocomplete="new-password"
+            aria-describedby="rg-password-hint"
+          />
+          <span id="rg-password-hint" class="muted hint">At least 10 characters.</span>
+          @if (registerForm.controls.password.touched && registerForm.controls.password.invalid) {
+            <span class="error-text">Use at least 10 characters.</span>
+          }
+        </div>
+        <button type="submit" class="btn btn-primary" [disabled]="busy()">
+          {{ busy() ? 'Creating…' : 'Create organisation' }}
+        </button>
+      </form>
+    }
+  </section>
+</main>

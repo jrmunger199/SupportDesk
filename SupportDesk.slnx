@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/SupportDesk.Api/SupportDesk.Api.csproj" />
+    <Project Path="src/SupportDesk.Data/SupportDesk.Data.csproj" />
+    <Project Path="src/SupportDesk.Domain/SupportDesk.Domain.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/SupportDesk.Tests/SupportDesk.Tests.csproj" />
+  </Folder>
+</Solution>
