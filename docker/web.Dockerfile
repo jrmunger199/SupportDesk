@@ -8,7 +8,7 @@ RUN npm run build && npm run check:bundle
 
 # The unprivileged nginx image runs as a non-root user and listens on 8080, so a bug in nginx does not hand an
 # attacker root inside the container.
-FROM nginxinc/nginx-unprivileged:1.29-alpine@sha256:0c79d56aee561a1d81c63f00eee5fb5fe29279560cdc55e91425133104c7fbe6 AS runtime
+FROM nginxinc/nginx-unprivileged:1.31-alpine@sha256:b5047b9b76845eac124358373c6852377c52e4b05834a47647e955dd91cb8f1e AS runtime
 COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
 COPY docker/security-headers.conf /etc/nginx/snippets/security-headers.conf
 COPY --from=build /web/dist/support-desk-web/browser /usr/share/nginx/html
